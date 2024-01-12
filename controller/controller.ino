@@ -1,3 +1,9 @@
+/*
+ *  Require SW-420 or equal function sensor for sensing shock motion
+ *  
+ *  Connecting the input pin into the sensor input pin
+ */
+
 
 int vibratePin = 13;
 int inputPin = 3;

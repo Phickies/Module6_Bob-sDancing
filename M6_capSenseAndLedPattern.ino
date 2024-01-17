@@ -25,10 +25,14 @@ CapacitiveSensor cs3 = CapacitiveSensor(6,5);
 CapacitiveSensor cs4 = CapacitiveSensor(8,7);
 
 int capSensorMin;
+int capSensor2Min;
 int patternNum; //Which tile to step on
 int prevPatternNum; 
 int beatNum; //The number of step
-int patternSpeed; //The speed of the game
+int patternSpeed; //The time spent on each tile
+unsigned long previousMillis = 0;
+int missed;
+int wrong;
 
 bool tile1; //back right
 bool tile2; // back left
@@ -39,9 +43,12 @@ void setup(){
 
 Serial.begin(9600);
 capSensorMin = 5000; //minimum value of the sensor to consider pressed
+capSensor2Min = 1000;
 
 beatNum = 0;
-patternSpeed = 5;
+patternSpeed = 2000;
+int missed = 0;
+int wrong = 0;
 
   strip1.begin();           // Initialize NeoPixel object
   strip1.setBrightness(10); // Set BRIGHTNESS to about 4% (max = 255)
@@ -65,26 +72,67 @@ patternSpeed = 5;
 
 void loop(){
 
-long start = millis();
+unsigned long currentMillis = millis();
 
 //Runs once per beat
-if ((start/10000)*patternSpeed > beatNum){
+if (currentMillis - previousMillis >= patternSpeed){
+
+  if(patternNum == 1 && tile1 != true ){
+    missed = missed + 1;
+    for(int i=0; i<LED_COUNTbob; i++) {
+    // Set the i-th LED to white
+    stripbob.setPixelColor(i, 255, 255, 255);
+    }
+  }else{
+    stripbob.clear();
+  }
+  if(patternNum == 2 && tile2 != true ){
+    missed = missed + 1;
+    for(int i=0; i<LED_COUNTbob; i++) {
+    // Set the i-th LED to whiteipbob.setPixelColor(i, 255, 0, 0);
+    }
+  }else{
+    stripbob.clear();
+  }
+  if(patternNum == 3 && tile3 != true ){
+    missed = missed + 1;
+    for(int i=0; i<LED_COUNTbob; i++) {
+    // Set the i-th LED to white
+    stripbob.setPixelColor(i, 255, 255, 255);
+    }
+  }else{
+    stripbob.clear();
+  }
+  if(patternNum == 4 && tile4 != true ){
+    missed = missed + 1;
+    for(int i=0; i<LED_COUNTbob; i++) {
+    // Set the i-th LED to white
+    stripbob.setPixelColor(i, 255, 255, 255);
+    }
+  }else{
+    stripbob.clear();
+  }
+
+  tile1 = false;
+  tile2 = false;
+  tile3 = false;
+  tile4 = false;
+
+  Serial.println(missed);
+  
   patternNum = random(1,5);
   if(patternNum == prevPatternNum){
   patternNum = random(1,5);    
   }
   prevPatternNum= patternNum;
+  previousMillis = currentMillis;
   
-  beatNum = beatNum + 1;
-  Serial.println(patternNum);
+  //Serial.println(patternNum);
 
   if (patternNum == 1){
  for(int i=0; i<LED_COUNT; i++) {
     // Set the i-th LED to white
     strip1.setPixelColor(i, 255, 255, 255);
-    if(tile1 == true){
-    strip1.clear();   // Send the updated pixel colors to off
-    }
   }
 }else{
     strip1.clear();   // Send the updated pixel colors to off
@@ -123,41 +171,31 @@ long total2 = cs2.capacitiveSensor(30);
 long total3 = cs3.capacitiveSensor(30);
 long total4 = cs4.capacitiveSensor(30);
 
-//Check the capSensors
+//Check the capSensors and 
 if (total1 > capSensorMin){
   strip1.clear();
+  tile1 = true;
 }
 
-if (total2 > capSensorMin){
+if (total2 > capSensor2Min){
   strip2.clear();
+  tile2 = true;
 }
 
 if (total3 > capSensorMin){
   strip3.clear();
+  tile3 = true;
 }
 
 if (total4 > capSensorMin){
   strip4.clear();
+  tile4 = true;
 }
-
-/*
-//Check sensor values
-Serial.print("s1 "); // tab character for debug window spacing
-Serial.println(total1); // print sensor output 1
-Serial.print("s2 "); // tab character for debug window spacing
-Serial.println(total2); // print sensor output 
-Serial.print("s3 "); // tab character for debug window spacing
-Serial.println(total3); // print sensor output 
-Serial.print("s4 "); // tab character for debug window spacing
-Serial.println(total4); // print sensor output 
-Serial.print("\n"); // tab character for debug window spacing
-*/
 
 strip1.show();   // Send the updated pixel colors to the hardware.
 strip2.show();   // Send the updated pixel colors to the hardware.
 strip3.show();   // Send the updated pixel colors to the hardware.
 strip4.show();   // Send the updated pixel colors to the hardware.
 stripbob.show();   // Send the updated pixel colors to the hardware.
-
 
 }

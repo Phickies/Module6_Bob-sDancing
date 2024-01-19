@@ -1,6 +1,9 @@
 #include <CapacitiveSensor.h>
 #include <Adafruit_NeoPixel.h>
 
+#define CON_PIN_OUT A0
+#define CON_PIN_IN A1
+
 // Pin to use to send signals to WS2812B
 #define LED_PIN1 9
 #define LED_PIN2 10
@@ -39,10 +42,16 @@ bool tile1;  //back right
 bool tile2;  // back left
 bool tile3;  //front right
 bool tile4;  //front left
+bool isShaked;
 
 void setup() {
 
   Serial.begin(9600);
+
+  pinMode(CON_PIN_OUT, OUTPUT);
+  pinMode(CON_PIN_IN, INPUT);
+  digitalWrite(CON_PIN_IN, LOW);
+
   capSensor1Min = 5000;
   capSensor2Min = 3000;
   capSensor3Min = 8000;
@@ -50,7 +59,7 @@ void setup() {
 
 
   patternSpeed = 2000;
-  int missed = 0;
+  missed = 0;
 
 
   strip1.begin();              // Initialize NeoPixel object
@@ -84,6 +93,7 @@ void loop() {
 
   readSensors();
   updateLEDs();
+  updateController();
 }
 
 void updatePattern() {
@@ -109,10 +119,9 @@ void updatePattern() {
 
     if (patternNum == 4) strip4.setPixelColor(i, 255, 255, 255);
     else strip4.clear();
-
-    if (patternNUm == 5) digitalWrite(A0, HIGH);
-    else digitalWrite(A0, LOW);
   }
+  if (patternNum == 5) digitalWrite(CON_PIN_OUT, HIGH);
+  else digitalWrite(CON_PIN_OUT, LOW);
 }
 
 void checkTiles() {
@@ -121,6 +130,7 @@ void checkTiles() {
   if (patternNum == 2 && !tile2) missed++;
   if (patternNum == 3 && !tile3) missed++;
   if (patternNum == 4 && !tile4) missed++;
+  if (patternNum == 5 && !isShaked) missed++;
 
   if (missed > 0) {
     for (int i = 0; i < LED_COUNTbob; i++) {
@@ -139,10 +149,12 @@ void readSensors() {
   tile2 = (total2 > capSensor2Min);
   tile3 = (total3 > capSensor3Min);
   tile4 = (total4 > capSensor4Min);
+  isShaked = (digitalRead(CON_PIN_IN) == LOW);
 }
 
 void resetTiles() {
   tile1 = tile2 = tile3 = tile4 = false;
+  isShaked = false;
 }
 
 void updateLEDs() {
@@ -152,4 +164,11 @@ void updateLEDs() {
   strip4.show();
   stripbob.show();
   stripbob.clear();  // Clear after showing to prepare for the next update
+}
+
+void updateController(){
+  if (isShaked) {
+    digitalWrite(CON_PIN_OUT, LOW);
+    Serial.println("isShaked");
+  }
 }

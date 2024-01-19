@@ -1,12 +1,9 @@
 #include <CapacitiveSensor.h>
 #include <Adafruit_NeoPixel.h>
-#include <Wire.h>
 
-// Pin to use to for controller
+//Pins for controler
 #define CON_R_PIN_OUT A0
-#define CON_L_PIN_OUT A1
-#define CON_R_PIN_IN A2
-#define CON_L_PIN_IN A3
+#define CON_R_PIN_IN A1
 
 // Pin to use to send signals to WS2812B
 #define LED_PIN1 9
@@ -38,42 +35,40 @@ int capSensor4Min;
 int patternNum;  //Which tile to step on
 int prevPatternNum;
 int patternSpeed;  //The time spent on each tile
-unsigned long previousMillis = 0;
-int missed;
-int wrong;
+unsigned long previousMillis;
+unsigned long gameStart;  // the time a game starts
+int missed;               //How may tiles missed per game
+int previousMissed;
+int gameLength;  //How long each game lasts
+
 
 bool tile1;  //back right
 bool tile2;  // back left
 bool tile3;  //front right
 bool tile4;  //front left
+bool isPlaying;
 bool isShakedR;
-bool isShakedL;
-
-const int MPU_ADDR = 0x68;
-int16_t accelerometer_x, accelerometer_y, accelerometer_z;  // variables for accelerometer raw data
-int16_t gyro_x, gyro_y, gyro_z;                             // variables for gyro raw datas
-
-char tmp_str[7];  // temporary variable used in convert function
 
 void setup() {
 
   Serial.begin(9600);
 
   pinMode(CON_R_PIN_OUT, OUTPUT);
-  pinMode(CON_L_PIN_OUT, OUTPUT);
   pinMode(CON_R_PIN_IN, INPUT);
-  pinMode(CON_L_PIN_IN, INPUT);
   digitalWrite(CON_R_PIN_IN, LOW);
-  digitalWrite(CON_L_PIN_IN, LOW);
+
 
   capSensor1Min = 5000;
   capSensor2Min = 3000;
   capSensor3Min = 8000;
   capSensor4Min = 4000;
 
-
+  previousMillis = 0;
   patternSpeed = 2000;
   missed = 0;
+  previousMissed = 0;
+  isPlaying = false;
+  gameLength = 30000;
 
 
   strip1.begin();              // Initialize NeoPixel object
@@ -94,21 +89,31 @@ void setup() {
 
   // The first NeoPixel in a strand is #0, second is 1, all the way up
   // to the count of pixels minus one.
-
-  Wire.begin();
-  Wire.beginTransmission(MPU_ADDR);  // Begins a transmission to the I2C slave (GY-521 board)
-  Wire.write(0x6B);                  // PWR_MGMT_1 register
-  Wire.write(0);                     // set to zero (wakes up the MPU-6050)
-  Wire.endTransmission(true);
 }
 
 void loop() {
   unsigned long currentMillis = millis();
 
-  if (currentMillis - previousMillis >= patternSpeed) {
-    checkTiles();
+  if (currentMillis - previousMillis >= patternSpeed && isPlaying == true) {
+    checkTiles();  //Check if the tile has been pressed at any moment during the waiting
     updatePattern();
     previousMillis = currentMillis;
+  }
+
+  if (isPlaying == false && tile3 == true && tile4 == true) {
+    isPlaying = true;
+    gameStart = millis();
+    Serial.println("Started");
+  }
+
+  if (isPlaying == true && currentMillis - gameStart >= gameLength) {
+    gameStart = 0;
+    isPlaying = false;
+    missed = 0;
+    previousMissed = 0;
+    Serial.println("Game End");
+    resetTiles();
+    standByBob();
   }
 
   readSensors();
@@ -120,9 +125,9 @@ void updatePattern() {
   resetTiles();
 
   // Randomly select a new pattern, ensuring it's different from the previous one
-  patternNum = random(1, 7);
+  patternNum = random(1, 6);
   while (patternNum == prevPatternNum) {
-    patternNum = random(1, 7);
+    patternNum = random(1, 6);
   }
   prevPatternNum = patternNum;
 
@@ -142,9 +147,6 @@ void updatePattern() {
   }
   if (patternNum == 5) digitalWrite(CON_R_PIN_OUT, HIGH);
   else digitalWrite(CON_R_PIN_OUT, LOW);
-
-  if (patternNum == 6) digitalWrite(CON_L_PIN_OUT, HIGH);
-  else digitalWrite(CON_L_PIN_OUT, LOW);
 }
 
 void checkTiles() {
@@ -154,12 +156,13 @@ void checkTiles() {
   if (patternNum == 3 && !tile3) missed++;
   if (patternNum == 4 && !tile4) missed++;
   if (patternNum == 5 && !isShakedR) missed++;
-  if (patternNum == 6 && !isShakedL) missed++;
 
-  if (missed > 0) {
+  if (missed > previousMissed) {
     for (int i = 0; i < LED_COUNTbob; i++) {
       stripbob.setPixelColor(i, 255, 0, 0);  // Red color for missed step
     }
+    previousMissed = missed;
+    Serial.println("missed");
   }
 }
 
@@ -174,13 +177,11 @@ void readSensors() {
   tile3 = (total3 > capSensor3Min);
   tile4 = (total4 > capSensor4Min);
   isShakedR = (digitalRead(CON_R_PIN_IN) == LOW);
-  isShakedL = acceleratorRead();
 }
 
 void resetTiles() {
   tile1 = tile2 = tile3 = tile4 = false;
   isShakedR = false;
-  isShakedL = false;
 }
 
 void updateLEDs() {
@@ -195,53 +196,20 @@ void updateLEDs() {
 void updateController() {
   if (isShakedR) {
     digitalWrite(CON_R_PIN_OUT, LOW);
-    Serial.println("isShaked RIGHT");
-  }
-  if (isShakedL) {
-    digitalWrite(CON_L_PIN_OUT, LOW);
-    Serial.println("isShaked LEFT");
+    //Serial.println("isShaked");
   }
 }
 
-char* convert_int16_to_str(int16_t i) {  // converts int16 to string. Moreover, resulting strings will have the same length in the debug monitor.
-  sprintf(tmp_str, "%6d", i);
-  return tmp_str;
-}
+void standByBob() {
+  for (int i = 0; i < LED_COUNTbob - 24; i++) {
+    stripbob.setPixelColor(i, 0, 255, 0);  // Green ambient light
+  }
 
-bool acceleratorRead() {
-  Wire.beginTransmission(MPU_ADDR);
-  Wire.write(0x3B);                         // starting with register 0x3B (ACCEL_XOUT_H) [MPU-6000 and MPU-6050 Register Map and Descriptions Revision 4.2, p.40]
-  Wire.endTransmission(false);              // the parameter indicates that the Arduino will send a restart. As a result, the connection is kept active.
-  Wire.requestFrom(MPU_ADDR, 7 * 2, true);  // request a total of 7*2=14 registers
+  int maxScore = int(gameLength / patternSpeed);
+  int ledScore = int(missed/maxScore * 24);
+  Serial.println(ledScore);
 
-  // "Wire.read()<<8 | Wire.read();" means two registers are read and stored in the same variable
-  accelerometer_x = Wire.read() << 8 | Wire.read();  // reading registers: 0x3B (ACCEL_XOUT_H) and 0x3C (ACCEL_XOUT_L)
-  accelerometer_y = Wire.read() << 8 | Wire.read();  // reading registers: 0x3D (ACCEL_YOUT_H) and 0x3E (ACCEL_YOUT_L)
-  accelerometer_z = Wire.read() << 8 | Wire.read();  // reading registers: 0x3F (ACCEL_ZOUT_H) and 0x40 (ACCEL_ZOUT_L)
-  gyro_x = Wire.read() << 8 | Wire.read();           // reading registers: 0x43 (GYRO_XOUT_H) and 0x44 (GYRO_XOUT_L)
-  gyro_y = Wire.read() << 8 | Wire.read();           // reading registers: 0x45 (GYRO_YOUT_H) and 0x46 (GYRO_YOUT_L)
-  gyro_z = Wire.read() << 8 | Wire.read();           // reading registers: 0x47 (GYRO_ZOUT_H) and 0x48 (GYRO_ZOUT_L)
-
-  // print out data
-  Serial.print("aX = ");
-  Serial.print(convert_int16_to_str(accelerometer_x));
-  Serial.print(" | aY = ");
-  Serial.print(convert_int16_to_str(accelerometer_y));
-  Serial.print(" | aZ = ");
-  Serial.print(convert_int16_to_str(accelerometer_z));
-  // the following equation was taken from the documentation [MPU-6000/MPU-6050 Register Map and Description, p.30]
-  Serial.print(" | tmp = ");
-  Serial.print(" | gX = ");
-  Serial.print(convert_int16_to_str(gyro_x));
-  Serial.print(" | gY = ");
-  Serial.print(convert_int16_to_str(gyro_y));
-  Serial.print(" | gZ = ");
-  Serial.print(convert_int16_to_str(gyro_z));
-  Serial.println();
-
-  // delay
-  delay(10);
-
-  return false;
-
+  for (int i = ledScore; i > 0 - 24; i--) {
+    stripbob.setPixelColor(i, 0, 255, 0);  // Light up the score bar based on score
+  }
 }

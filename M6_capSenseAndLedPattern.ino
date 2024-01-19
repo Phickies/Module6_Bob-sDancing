@@ -34,6 +34,7 @@ int patternSpeed; //The time spent on each tile
 unsigned long previousMillis = 0;
 int missed;
 int wrong;
+bool isPlaying;
 
 bool tile1; //back right
 bool tile2; // back left
@@ -48,7 +49,7 @@ capSensor2Min = 3000;
 capSensor3Min = 8000;
 capSensor4Min = 4000;
 
-
+bool isPlaying = false;
 patternSpeed = 2000;
 int missed = 0;
 
@@ -78,7 +79,7 @@ void loop(){
 unsigned long currentMillis = millis();
 
 //Runs once per beat
-if (currentMillis - previousMillis >= patternSpeed){
+if (currentMillis - previousMillis >= patternSpeed && isPlaying == true){
 
   if(patternNum == 1 && tile1 != true ){
     missed = missed + 1;
@@ -186,6 +187,10 @@ if (total3 > capSensor3Min){
 if (total4 > capSensor4Min){
   strip4.clear();
   tile4 = true;
+}
+
+if (isPlaying == false && tile1 == ){
+
 }
 
 strip1.show();   // Send the updated pixel colors to the hardware.

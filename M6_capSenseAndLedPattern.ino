@@ -21,11 +21,11 @@
 
 #define CAP_SEN_MIN_1 5000
 #define CAP_SEN_MIN_2 3000
-#define CAP_SEN_MIN_3 8000
-#define CAP_SEN_MIN_4 4000
+#define CAP_SEN_MIN_3 12000
+#define CAP_SEN_MIN_4 6000
 
 #define PATTERN_SPEED 2000
-#define GAME_LENGTH 6000
+#define GAME_LENGTH 30000
 
 // Setting up the NeoPixel library
 Adafruit_NeoPixel strip1(LED_COUNT, LED_PIN1, NEO_GRB + NEO_KHZ800);
@@ -55,9 +55,9 @@ bool isPlaying;
 bool isShakedR;
 bool isShakedL;
 
-const int MPU_ADDR = 0x68;
-int16_t accelerometer_x, accelerometer_y, accelerometer_z;  // variables for accelerometer raw data
-int16_t gyro_x, gyro_y, gyro_z;                             // variables for gyro raw datas
+// const int MPU_ADDR = 0x68;
+// int16_t accelerometer_x, accelerometer_y, accelerometer_z;  // variables for accelerometer raw data
+// int16_t gyro_x, gyro_y, gyro_z;                             // variables for gyro raw datas
 
 char tmp_str[7];  // temporary variable used in convert function
 
@@ -95,15 +95,22 @@ void setup() {
   // The first NeoPixel in a strand is #0, second is 1, all the way up
   // to the count of pixels minus one.
 
-  Wire.begin();
-  Wire.beginTransmission(MPU_ADDR);  // Begins a transmission to the I2C slave (GY-521 board)
-  Wire.write(0x6B);                  // PWR_MGMT_1 register
-  Wire.write(0);                     // set to zero (wakes up the MPU-6050)
-  Wire.endTransmission(true);
+  // Wire.begin();
+  // Wire.beginTransmission(MPU_ADDR);  // Begins a transmission to the I2C slave (GY-521 board)
+  // Wire.write(0x6B);                  // PWR_MGMT_1 register
+  // Wire.write(0);                     // set to zero (wakes up the MPU-6050)
+  // Wire.endTransmission(true);
 }
 
 void loop() {
   unsigned long currentMillis = millis();
+
+  if (!isPlaying) {
+    Serial.print("tile check 3:");
+    Serial.println(tile3);
+    Serial.print("tile check 4:");
+    Serial.println(tile4);
+  }
 
   if (currentMillis - previousMillis >= PATTERN_SPEED
       && isPlaying == true) {
@@ -116,8 +123,8 @@ void loop() {
     gameStart();
   }
 
-  if (isPlaying == false){
-    Serial.print("Standby");
+  if (isPlaying == false) {
+    Serial.println("Standby");
   }
 
   if (isPlaying == true && currentMillis - startTime >= GAME_LENGTH) {
@@ -162,19 +169,36 @@ void updatePattern() {
 
 void checkTiles() {
   // Check if the correct tile was stepped on
-  if (patternNum == 1 && !tile1) missed++;
-  if (patternNum == 2 && !tile2) missed++;
-  if (patternNum == 3 && !tile3) missed++;
-  if (patternNum == 4 && !tile4) missed++;
-  if (patternNum == 5 && !isShakedR) missed++;
-  if (patternNum == 6 && !isShakedL) missed++;
+  if (patternNum == 1 && !tile1) {
+    missed++;
+    Serial.println("You missed number 1");
+  }
+  if (patternNum == 2 && !tile2) {
+    missed++;
+    Serial.println("You missed number 2");
+  }
+  if (patternNum == 3 && !tile3) {
+    missed++;
+    Serial.println("You missed number 3");
+  }
+  if (patternNum == 4 && !tile4) {
+    missed++;
+    Serial.println("You missed number 4");
+  }
+  if (patternNum == 5 && !isShakedR) {
+    missed++;
+    Serial.println("You missed number 5");
+  }
+  if (patternNum == 6 && !isShakedL) {
+    missed++;
+    Serial.println("You missed number 6");
+  }
 
   if (missed > previousMissed) {
     for (int i = 0; i < LED_COUNTbob; i++) {
       stripbob.setPixelColor(i, 255, 0, 0);  // Red color for missed step
     }
     previousMissed = missed;
-    Serial.println("missed");
   }
 }
 
@@ -189,7 +213,12 @@ void readSensors() {
   tile3 = (total3 > CAP_SEN_MIN_3);
   tile4 = (total4 > CAP_SEN_MIN_4);
   isShakedR = (digitalRead(CON_R_PIN_IN) == LOW);
-  isShakedL = acceleratorRead();
+  // isShakedL = acceleratorRead();
+
+  if (tile1) strip1.clear();
+  if (tile2) strip2.clear();
+  if (tile3) strip3.clear();
+  if (tile4) strip4.clear();
 }
 
 void resetTiles() {
@@ -218,58 +247,61 @@ void updateController() {
   }
 }
 
-char* convert_int16_to_str(int16_t i) {  // converts int16 to string. Moreover, resulting strings will have the same length in the debug monitor.
-  sprintf(tmp_str, "%6d", i);
-  return tmp_str;
-}
+// char* convert_int16_to_str(int16_t i) {  // converts int16 to string. Moreover, resulting strings will have the same length in the debug monitor.
+//   sprintf(tmp_str, "%6d", i);
+//   return tmp_str;
+// }
 
-bool acceleratorRead() {
-  Wire.beginTransmission(MPU_ADDR);
-  Wire.write(0x3B);                         // starting with register 0x3B (ACCEL_XOUT_H) [MPU-6000 and MPU-6050 Register Map and Descriptions Revision 4.2, p.40]
-  Wire.endTransmission(false);              // the parameter indicates that the Arduino will send a restart. As a result, the connection is kept active.
-  Wire.requestFrom(MPU_ADDR, 7 * 2, true);  // request a total of 7*2=14 registers
+// bool acceleratorRead() {
+//   Wire.beginTransmission(MPU_ADDR);
+//   Wire.write(0x3B);                         // starting with register 0x3B (ACCEL_XOUT_H) [MPU-6000 and MPU-6050 Register Map and Descriptions Revision 4.2, p.40]
+//   Wire.endTransmission(false);              // the parameter indicates that the Arduino will send a restart. As a result, the connection is kept active.
+//   Wire.requestFrom(MPU_ADDR, 7 * 2, true);  // request a total of 7*2=14 registers
 
-  // "Wire.read()<<8 | Wire.read();" means two registers are read and stored in the same variable
-  accelerometer_x = Wire.read() << 8 | Wire.read();  // reading registers: 0x3B (ACCEL_XOUT_H) and 0x3C (ACCEL_XOUT_L)
-  accelerometer_y = Wire.read() << 8 | Wire.read();  // reading registers: 0x3D (ACCEL_YOUT_H) and 0x3E (ACCEL_YOUT_L)
-  accelerometer_z = Wire.read() << 8 | Wire.read();  // reading registers: 0x3F (ACCEL_ZOUT_H) and 0x40 (ACCEL_ZOUT_L)
-  gyro_x = Wire.read() << 8 | Wire.read();           // reading registers: 0x43 (GYRO_XOUT_H) and 0x44 (GYRO_XOUT_L)
-  gyro_y = Wire.read() << 8 | Wire.read();           // reading registers: 0x45 (GYRO_YOUT_H) and 0x46 (GYRO_YOUT_L)
-  gyro_z = Wire.read() << 8 | Wire.read();           // reading registers: 0x47 (GYRO_ZOUT_H) and 0x48 (GYRO_ZOUT_L)
+//   // "Wire.read()<<8 | Wire.read();" means two registers are read and stored in the same variable
+//   accelerometer_x = Wire.read() << 8 | Wire.read();  // reading registers: 0x3B (ACCEL_XOUT_H) and 0x3C (ACCEL_XOUT_L)
+//   accelerometer_y = Wire.read() << 8 | Wire.read();  // reading registers: 0x3D (ACCEL_YOUT_H) and 0x3E (ACCEL_YOUT_L)
+//   accelerometer_z = Wire.read() << 8 | Wire.read();  // reading registers: 0x3F (ACCEL_ZOUT_H) and 0x40 (ACCEL_ZOUT_L)
+//   gyro_x = Wire.read() << 8 | Wire.read();           // reading registers: 0x43 (GYRO_XOUT_H) and 0x44 (GYRO_XOUT_L)
+//   gyro_y = Wire.read() << 8 | Wire.read();           // reading registers: 0x45 (GYRO_YOUT_H) and 0x46 (GYRO_YOUT_L)
+//   gyro_z = Wire.read() << 8 | Wire.read();           // reading registers: 0x47 (GYRO_ZOUT_H) and 0x48 (GYRO_ZOUT_L)
 
-  // print out data
-  Serial.print("aX = ");
-  Serial.print(convert_int16_to_str(accelerometer_x));
-  Serial.print(" | aY = ");
-  Serial.print(convert_int16_to_str(accelerometer_y));
-  Serial.print(" | aZ = ");
-  Serial.print(convert_int16_to_str(accelerometer_z));
-  // the following equation was taken from the documentation [MPU-6000/MPU-6050 Register Map and Description, p.30]
-  Serial.print(" | tmp = ");
-  Serial.print(" | gX = ");
-  Serial.print(convert_int16_to_str(gyro_x));
-  Serial.print(" | gY = ");
-  Serial.print(convert_int16_to_str(gyro_y));
-  Serial.print(" | gZ = ");
-  Serial.print(convert_int16_to_str(gyro_z));
-  Serial.println();
+//   // print out data
+//   Serial.print("aX = ");
+//   Serial.print(convert_int16_to_str(accelerometer_x));
+//   Serial.print(" | aY = ");
+//   Serial.print(convert_int16_to_str(accelerometer_y));
+//   Serial.print(" | aZ = ");
+//   Serial.print(convert_int16_to_str(accelerometer_z));
+//   // the following equation was taken from the documentation [MPU-6000/MPU-6050 Register Map and Description, p.30]
+//   Serial.print(" | tmp = ");
+//   Serial.print(" | gX = ");
+//   Serial.print(convert_int16_to_str(gyro_x));
+//   Serial.print(" | gY = ");
+//   Serial.print(convert_int16_to_str(gyro_y));
+//   Serial.print(" | gZ = ");
+//   Serial.print(convert_int16_to_str(gyro_z));
+//   Serial.println();
 
-  // delay
-  delay(10);
+//   // delay
+//   delay(10);
 
-  return false;
-}
+//   return false;
+// }
 
 void gameStart() {
   isPlaying = true;
   startTime = millis();
+  Serial.println("----------------------------------------------------------------");
   Serial.println("Started");
+  Serial.println("----------------------------------------------------------------");
 }
 
 void gameOver() {
   isPlaying = false;
   missed = 0;
   previousMissed = 0;
+
   Serial.println("Game End");
   resetTiles();
 

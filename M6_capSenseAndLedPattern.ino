@@ -10,7 +10,7 @@
 
 // Number of WS2812B LEDs attached to the Arduino
 #define LED_COUNT 47
-#define LED_COUNTbob 20
+#define LED_COUNTbob 82
 
 // Setting up the NeoPixel library
 Adafruit_NeoPixel strip1(LED_COUNT, LED_PIN1, NEO_GRB + NEO_KHZ800);
@@ -24,11 +24,12 @@ CapacitiveSensor cs2 = CapacitiveSensor(4,3);
 CapacitiveSensor cs3 = CapacitiveSensor(6,5);
 CapacitiveSensor cs4 = CapacitiveSensor(8,7);
 
-int capSensorMin;
+int capSensor1Min;
 int capSensor2Min;
+int capSensor3Min;
+int capSensor4Min;
 int patternNum; //Which tile to step on
 int prevPatternNum; 
-int beatNum; //The number of step
 int patternSpeed; //The time spent on each tile
 unsigned long previousMillis = 0;
 int missed;
@@ -42,13 +43,15 @@ bool tile4; //front left
 void setup(){
 
 Serial.begin(9600);
-capSensorMin = 5000; //minimum value of the sensor to consider pressed
-capSensor2Min = 1000;
+capSensor1Min = 5000;
+capSensor2Min = 3000; 
+capSensor3Min = 8000;
+capSensor4Min = 4000;
 
-beatNum = 0;
+
 patternSpeed = 2000;
 int missed = 0;
-int wrong = 0;
+
 
   strip1.begin();           // Initialize NeoPixel object
   strip1.setBrightness(10); // Set BRIGHTNESS to about 4% (max = 255)
@@ -81,44 +84,38 @@ if (currentMillis - previousMillis >= patternSpeed){
     missed = missed + 1;
     for(int i=0; i<LED_COUNTbob; i++) {
     // Set the i-th LED to white
-    stripbob.setPixelColor(i, 255, 255, 255);
+    stripbob.setPixelColor(i, 255, 0, 0);
     }
-  }else{
-    stripbob.clear();
   }
+
   if(patternNum == 2 && tile2 != true ){
     missed = missed + 1;
     for(int i=0; i<LED_COUNTbob; i++) {
-    // Set the i-th LED to whiteipbob.setPixelColor(i, 255, 0, 0);
+    // Set the i-th LED to white
+    stripbob.setPixelColor(i, 255, 0, 0);
     }
-  }else{
-    stripbob.clear();
   }
+
   if(patternNum == 3 && tile3 != true ){
     missed = missed + 1;
     for(int i=0; i<LED_COUNTbob; i++) {
     // Set the i-th LED to white
-    stripbob.setPixelColor(i, 255, 255, 255);
+    stripbob.setPixelColor(i, 255, 0, 0);
     }
-  }else{
-    stripbob.clear();
   }
+
   if(patternNum == 4 && tile4 != true ){
     missed = missed + 1;
     for(int i=0; i<LED_COUNTbob; i++) {
     // Set the i-th LED to white
-    stripbob.setPixelColor(i, 255, 255, 255);
+    stripbob.setPixelColor(i, 255, 0, 0);
     }
-  }else{
-    stripbob.clear();
   }
 
   tile1 = false;
   tile2 = false;
   tile3 = false;
   tile4 = false;
-
-  Serial.println(missed);
   
   patternNum = random(1,5);
   if(patternNum == prevPatternNum){
@@ -126,9 +123,8 @@ if (currentMillis - previousMillis >= patternSpeed){
   }
   prevPatternNum= patternNum;
   previousMillis = currentMillis;
-  
-  //Serial.println(patternNum);
 
+                        //Light up the tile according to the pattern
   if (patternNum == 1){
  for(int i=0; i<LED_COUNT; i++) {
     // Set the i-th LED to white
@@ -172,7 +168,7 @@ long total3 = cs3.capacitiveSensor(30);
 long total4 = cs4.capacitiveSensor(30);
 
 //Check the capSensors and 
-if (total1 > capSensorMin){
+if (total1 > capSensor1Min){
   strip1.clear();
   tile1 = true;
 }
@@ -182,12 +178,12 @@ if (total2 > capSensor2Min){
   tile2 = true;
 }
 
-if (total3 > capSensorMin){
+if (total3 > capSensor3Min){
   strip3.clear();
   tile3 = true;
 }
 
-if (total4 > capSensorMin){
+if (total4 > capSensor4Min){
   strip4.clear();
   tile4 = true;
 }
@@ -197,5 +193,7 @@ strip2.show();   // Send the updated pixel colors to the hardware.
 strip3.show();   // Send the updated pixel colors to the hardware.
 strip4.show();   // Send the updated pixel colors to the hardware.
 stripbob.show();   // Send the updated pixel colors to the hardware.
+
+stripbob.clear();
 
 }

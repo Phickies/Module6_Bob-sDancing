@@ -1,3 +1,7 @@
+/* This code is for optimised running
+Written and Design by Phicks
+  */
+  
 #include <CapacitiveSensor.h>
 #include <Adafruit_NeoPixel.h>
 
